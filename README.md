@@ -1,5 +1,5 @@
 # Northwind_DW
-Datawarehousing for Northwind database
+
 North wind database is the database created by Microsoft for training and educational purpose.
 
 There are many business drivers that can be driven from North wind database E-R diagram. Some of the North wind business requirements (subject area) to construct data mart from the E-R diagram is as follows
