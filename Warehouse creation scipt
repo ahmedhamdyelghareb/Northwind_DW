@@ -1,0 +1,58 @@
+Date or Time dimension table:
+
+--Drop any table if any
+DROP TABLE [Northwind_DW]. [dbo].Day_Dim;
+
+Creation of table with days, month to generate report
+CREATE TABLE [Northwind_DW].dbo.Day_Dim ( [Date] DATETIME, [DayName] VARCHAR(9), [WeekOfMonth] INT, [MonthName] VARCHAR(9), [Quarter] INT, [Year] INT PRIMARY KEY (Date) );
+
+ETL Process for Day_Dimension table useful in generating time related reports
+INSERT INTO [Northwind_DW].[dbo].Day_Dim( Date, DayName, WeekOfMonth, MonthName, Quarter, Year)
+SELECT Date, DayName, WeekOfMonth, MonthName, Quarter, Year
+FROM Northwind.dbo.day_dimension;
+
+Employee Dimension:
+Drop any table if any
+DROP TABLE [Northwind_DW].[dbo].Employee_Dim;
+Creation of employee table with some details to generate report
+CREATE TABLE [Northwind_DW].dbo.Employee_Dim ( [EmployeeID] INT NOT NULL, [LastName] NVARCHAR(20) NOT NULL, [FirstName] NVARCHAR(10) NOT NULL, [Region] NVARCHAR(15), [City] NVARCHAR(15), [Country] NVARCHAR(15)
+PRIMARY KEY (EmployeeID) );
+ETL Process for Employee table
+INSERT INTO [Northwind_DW].[dbo].Employee_Dim( EmployeeID, LastName, FirstName, Region, City, Country)
+SELECT EmployeeID, LastName, FirstName, Region, City, Country
+FROM Northwind.dbo.Employees;
+
+Product Dimension:
+Drop any table if any
+DROP TABLE [Northwind_DW].[dbo].Product_Dim;
+Create Product table with some details to generate report
+CREATE TABLE [Northwind_DW].dbo.Product_Dim ( [ProductID] INT NOT NULL, [ProductName] NVARCHAR(40) NOT NULL, [CategoryID] INT, [QuantityPerUnit] NVARCHAR(20), PRIMARY KEY (ProductID) );
+ETL Process for Product Dimension table useful in generating product related reports
+INSERT INTO [Northwind_DW].[dbo].Product_Dim( ProductID, ProductName, CategoryID, QuantityPerUnit)
+SELECT ProductID, ProductName, CategoryID, QuantityPerUnit
+FROM Northwind.dbo.Products;
+
+Customer Dimension:
+Drop any table if any
+DROP TABLE [Northwind_DW].[dbo].Customer_Dim;
+Create Customer table with some details to generate report
+CREATE TABLE [Northwind_DW].dbo.Customer_Dim ( [CustomerID] NCHAR(5) NOT NULL, [ContactName] NVARCHAR(30), [CompanyName] NVARCHAR(40) NOT NULL, [Region] NVARCHAR(15), [City] NVARCHAR(15), [Country] NVARCHAR(15), Primary Key(CustomerID)
+);
+ETL Process for Customer Dimension table useful in generating customer related reports
+INSERT INTO [Northwind_DW].[dbo].Customer_Dim( CustomerID, ContactName, CompanyName, Region, City, Country)
+SELECT CustomerID, ContactName, CompanyName, Region, City, Country
+FROM Northwind.dbo.Customers;
+
+Order Fact table:
+Drop any table if any
+DROP TABLE [Northwind_DW].[dbo].Order_fact;
+Creation of fact table for order facts
+CREATE TABLE [Northwind_DW].[dbo].Order_fact ( [OrderID] INT NOT NULL, [OrderDate] DATETIME, [ProductID] INT NOT NULL, [CustomerID] NCHAR(5), [EmployeeID] INT, [RequiredDate] DATETIME, [ShippedDate] DATETIME,
+[ShipVia] INT, [Date] DATETIME, [Quantity] SMALLINT NOT NULL, [Discount] REAL NOT NULL, [UnitPrice] MONEY NOT NULL, [Freight] MONEY, [UnitsInStock] SMALLINT, [UnitsInOrder] SMALLINT, [ReorderLevel] SMALLINT, PRIMARY KEY (OrderID), CONSTRAINT FK_customer FOREIGN KEY (CustomerID) REFERENCES Customer_Dim(CustomerID), CONSTRAINT FK_date FOREIGN KEY (Date) REFERENCES dbo.Day_Dim(Date), CONSTRAINT FK_employee FOREIGN KEY (EmployeeID) REFERENCES dbo.Employee_Dim(EmployeeID), CONSTRAINT FK_product FOREIGN KEY (ProductID) REFERENCES dbo.Product_Dim(ProductID) );
+Since there are records that have duplicate order values in accordance with product table, we can ignore that by dropping the constraint as below
+ALTER TABLE [Northwind_DW].[dbo].Order_fact DROP CONSTRAINT PK__Order_fa__C3905BAF9C1F21A6;
+ETL process for Order fact table creation
+INSERT INTO [Northwind_DW].[dbo].Order_fact( OrderID, OrderDate, ProductID, CustomerID, EmployeeID, RequiredDate, ShippedDate, ShipVia, Date, Quantity, Discount, UnitPrice, Freight, UnitsInStock, UnitsInOrder, ReorderLevel) SELECT o.OrderID, o.OrderDate, p.ProductID, o.CustomerID, o.EmployeeID, o.RequiredDate, o.ShippedDate, o.ShipVia, d.Date, od.Quantity, od.Discount, od.UnitPrice, o.Freight,
+p.UnitsInStock, p.UnitsOnOrder, p.ReorderLevel
+FROM Northwind.dbo.Orders o JOIN Northwind.dbo.[Order Details] od ON od.OrderID = o.OrderID JOIN Northwind.dbo.Products p ON od.ProductID = p.ProductID JOIN Northwind.dbo.day_dimension d ON d.Date = o.OrderDate;
+PRIMARY KEY (OrderID), CONSTRAINT FK_customer FOREIGN KEY (CustomerID) REFERENCES Customer_Dim(CustomerID), CONSTRAINT FK_date FOREIGN KEY (Date) REFERENCES dbo.Day_Dim(Date), CONSTRAINT FK_employee FOREIGN KEY (EmployeeID) REFERENCES dbo.Employee_Dim(EmployeeID), CONSTRAINT FK_product FOREIGN KEY (ProductID) REFERENCES dbo.Product_Dim(ProductID)
